@@ -1,0 +1,14 @@
+membership_discount:10
+max_surge_price: 19
+customer_primium:10
+high_demand_surge:5
+high_demand_seat_fillup_cutoff:.5
+high_demand_seat_fillup_time_cutoff:8
+low_demand_discount:10
+low_demand_seat_fillup_cutoff:.3
+low_demand_seat_fillup_time_cutoff:6
+eleventhhour_seat_fillup_cutoff:.90
+special_days_surge:1.2
+prime_show_surge:1.2
+slow_show_surge:0.8
+neutral_show_surge:0

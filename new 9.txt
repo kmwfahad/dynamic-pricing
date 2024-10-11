@@ -1,0 +1,115 @@
+from datetime import datetime
+current_date_time = datetime.now()
+current_day = current_date_time.day
+current_date = datetime.now().date()
+
+#Read Dynamic Pricing Config file
+data_dict = {}
+with open('dynamic_price.txt', 'r') as file:
+    for line in file:
+        # Assuming each line contains key-value pairs separated by a delimiter
+        key, value = line.strip().split(':')
+        data_dict[key] = value
+        
+membership_discount=data_dict.get('membership_discount')
+customer_primium=data_dict.get('customer_primium')
+high_demand_surge=data_dict.get('high_demand_surge')
+high_demand_seat_fillup_cutoff=float(data_dict.get('high_demand_seat_fillup_cutoff'))
+high_demand_seat_fillup_time_cutoff=int(data_dict.get('high_demand_seat_fillup_time_cutoff'))
+low_demand_discount=data_dict.get('low_demand_discount')
+low_demand_seat_fillup_time_cutoff=int(data_dict.get('low_demand_seat_fillup_time_cutoff'))
+low_demand_seat_fillup_cutoff=float(data_dict.get('low_demand_seat_fillup_cutoff'))
+eleventhhour_seat_fillup_cutoff = float(data_dict.get('eleventhhour_seat_fillup_cutoff'))
+max_surge_price = float(data_dict.get('max_surge_price'))
+
+def findDemand(movieId, showStartTime, bookingStartTime, bookingCount, seatAvailable, price):
+    given_booking_start_date = datetime.strptime(bookingStartTime, "%Y-%m-%d %H:%M:%S")
+    difference_with_booking_start_date = current_date_time - given_booking_start_date
+    #Difference of hrs from bookings open time
+    difference_in_hours1 = int(difference_with_booking_start_date.total_seconds() / 3600)  # 3600 seconds in an hour
+    given_showStartTime = datetime.strptime(showStartTime, "%Y-%m-%d %H:%M:%S")
+    difference_with_show_start_date = current_date_time - given_showStartTime
+    #Difference of hrs till show time
+    difference_in_hours2 = int(difference_with_show_start_date.total_seconds() / 3600)  # 3600 seconds in an hour
+    
+    if (bookingCount/seatAvailable) >= eleventhhour_seat_fillup_cutoff:
+        print("11th hour seats")
+        return price * 0.75
+    elif difference_in_hours1 <= high_demand_seat_fillup_time_cutoff and (bookingCount/seatAvailable) >= high_demand_seat_fillup_cutoff:
+        print("High Demand")
+        return price * 1.2
+    elif difference_in_hours2 <= low_demand_seat_fillup_time_cutoff and (bookingCount/seatAvailable) <= low_demand_seat_fillup_cutoff:
+        print("Low Demand")
+        return price * 0.8       
+    else:
+        print("No Demand Surge")
+        return price
+    
+def findDaySurge(showStartTime):
+    showDate = showStartTime[:10]
+    showDay = (datetime.strptime(showStartTime, "%Y-%m-%d %H:%M:%S").strftime("%A"))
+    print("showDate",showDate)
+    print("showDay",showDay)
+    with open('specialDaysList.txt', 'r') as file:
+        for line in file:
+            if showDate in line:
+                return price * 0.1
+    if showDay in ('Friday','Saturday','Sunday'):
+        return price * 0.1
+    else:
+        return 0
+
+def findShowTimeSurge(showStartTime):
+    showCategories = {}
+    showType = ""
+    showTime = (datetime.strptime(showStartTime, "%Y-%m-%d %H:%M:%S")).strftime("%H:%M")
+    print("showTime",showTime)
+    with open('showTimeCategories.txt', 'r') as file:
+        for line in file:
+            key, values = line.split('-')
+            showCategories[key.strip()] = values.strip().split(',')
+    for key, values in showCategories.items():
+        if showTime in values:
+            showType = key
+            break
+    print("showType",showType)
+    if showType == 'Prime':
+        return price*0.2
+    elif showType == 'Slow':
+        return -price*0.2
+    else:
+        return 0
+    
+movie ={
+        1:['M1','2024-03-05 11:00:00','2024-03-04 13:00:00',15.00,'2024-03-03 06:00:00',60, 55,'English'],
+        2:['M2','2024-03-05 11:00:00','2024-03-04 13:00:00',15.00,'2024-03-03 06:00:00',60, 35,'Korean'],
+        3:['M3','2024-03-06 11:00:00','2024-03-04 13:00:00',15.00,'2024-03-02 09:00:00',60, 10,'Hindi'],
+        4:['M4','2024-03-06 11:00:00','2024-03-04 13:00:00',15.00,'2024-03-02 09:00:00',60, 40,'English']
+       } 
+
+
+movie_Id = input("enter the movie id : ")
+movie_details = movie.get(int(movie_Id))
+showStartTime=movie_details[1]
+price=movie_details[3]
+bookingStartTime=movie_details[4]
+seatAvailable=movie_details[5]
+bookingCount=movie_details[6]
+language=movie_details[7]
+movie_release_date_str = movie_details[4]
+
+#Price based on Demand
+currentPrice=findDemand(movie_Id, showStartTime, bookingStartTime, bookingCount, seatAvailable,price)
+#Price based on day of the week
+currentPrice += findDaySurge(showStartTime)
+#Price based on showtime 
+currentPrice += findShowTimeSurge(showStartTime)
+
+if currentPrice > max_surge_price:
+    currentPrice = max_surge_price
+
+print("currentPrice - ${}".format(currentPrice))
+
+ 
+
+
